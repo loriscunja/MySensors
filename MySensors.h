@@ -67,6 +67,8 @@
 #include "core/MyHwSAMD.cpp"
 #elif defined(__linux__)
 #include "core/MyHwLinuxGeneric.cpp"
+#elif defined(ARDUINO_ARCH_XI)
+#include "core/MyHwLG8F.cpp"
 #endif
 
 // LEDS
