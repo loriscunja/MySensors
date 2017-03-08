@@ -60,6 +60,8 @@
 #define MY_CAP_ARCH "E"
 #elif defined(ARDUINO_ARCH_AVR)
 #define MY_CAP_ARCH "A"
+#elif defined(ARDUINO_ARCH_XI)
+#define MY_CAP_ARCH "A"
 #else
 #define MY_CAP_ARCH "-"
 #endif

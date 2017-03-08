@@ -30,6 +30,7 @@
 #include <util/atomic.h>
 #include <PMU.h>
 #include <LGTWDT.h>
+#include <EEPROM.h>
 
 #ifdef __cplusplus
 #include <Arduino.h>
@@ -73,8 +74,8 @@
 #define hwReboot() wdt_enable(WDTO_15MS); while (1)
 #define hwMillis() millis()
 #define hwRandomNumberInit() randomSeed(analogRead(MY_SIGNING_SOFT_RANDOMSEED_PIN))
-#define hwReadConfig(__pos) eeprom_read_byte((uint8_t*)(__pos))
-#define hwWriteConfig(__pos, __val) eeprom_update_byte((uint8_t*)(__pos), (__val))
+#define hwReadConfig(__pos) EEPROM.read(__pos)
+#define hwWriteConfig(__pos, __val) EEPROM.write(__pos, __val)
 #define hwReadConfigBlock(__buf, __pos, __length) eeprom_read_block((void*)(__buf), (void*)(__pos), (__length))
 #define hwWriteConfigBlock(__buf, __pos, __length) eeprom_update_block((void*)(__buf), (void*)(__pos), (__length))
 

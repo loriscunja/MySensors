@@ -20,7 +20,7 @@
 #ifdef ARDUINO_ARCH_XI 
 
 #include "MyHwLG8F.h"
-
+#include <PMU.h>
 #define INVALID_INTERRUPT_NUM	(0xFFu)
 
 volatile uint8_t _wokeUpByInterrupt =
@@ -61,39 +61,7 @@ ISR (WDT_vect)
 */
 void hwPowerDown(period_t period)
 {
-	// disable ADC for power saving
-	ADCSRA &= ~(1 << ADEN);
-	// save WDT settings
-	uint8_t WDTsave = WDTCSR;
-	if (period != SLEEP_FOREVER) {
-		wdt_enable(period);
-		// enable WDT interrupt before system reset
-		WDTCSR |= (1 << WDCE) | (1 << WDIE);
-	} else {
-		// if sleeping forever, disable WDT
-		wdt_disable();
-	}
-	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-	cli();
-	sleep_enable();
-#if defined __AVR_ATmega328P__
-	sleep_bod_disable();
-#endif
-	// Enable interrupts & sleep until WDT or ext. interrupt
-	sei();
-	// Directly sleep CPU, to prevent race conditions! (see chapter 7.7 of ATMega328P datasheet)
-	sleep_cpu();
-	sleep_disable();
-	// restore previous WDT settings
-	cli();
-	wdt_reset();
-	// enable WDT changes
-	WDTCSR |= (1 << WDCE) | (1 << WDE);
-	// restore saved WDT settings
-	WDTCSR = WDTsave;
-	sei();
-	// enable ADC
-	ADCSRA |= (1 << ADEN);
+	PMU.sleep(PM_POFFS0, period);  
 }
 
 void hwInternalSleep(unsigned long ms)
@@ -128,19 +96,19 @@ void hwInternalSleep(unsigned long ms)
 	}
 	if (!interruptWakeUp() && ms >= 512)     {
 		hwPowerDown(SLEEP_512MS);
-		ms -= 500;
+		ms -= 512;
 	}
 	if (!interruptWakeUp() && ms >= 256)     {
 		hwPowerDown(SLEEP_256MS);
-		ms -= 250;
+		ms -= 256;
 	}
 	if (!interruptWakeUp() && ms >= 128)     {
 		hwPowerDown(SLEEP_128MS);
-		ms -= 120;
+		ms -= 128;
 	}
 	if (!interruptWakeUp() && ms >= 64)      {
 		hwPowerDown(SLEEP_64MS );
-		ms -= 60;
+		ms -= 64;
 	}	
 }
 
@@ -201,52 +169,14 @@ int8_t hwSleep(uint8_t interrupt1, uint8_t mode1, uint8_t interrupt2, uint8_t mo
 #if defined(MY_DEBUG) || defined(MY_SPECIAL_DEBUG)
 uint16_t hwCPUVoltage()
 {
-	// Measure Vcc against 1.1V Vref
-#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-	ADMUX = (_BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1));
-#elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
-	ADMUX = (_BV(MUX5) | _BV(MUX0));
-#elif defined (__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
-	ADMUX = (_BV(MUX3) | _BV(MUX2));
-#else
-	ADMUX = (_BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1));
-#endif
-	// Vref settle
-	delay(70);
-	// Do conversion
-	ADCSRA |= _BV(ADSC);
-	while (bit_is_set(ADCSRA,ADSC)) {};
-	// return Vcc in mV
-	return (1125300UL) / ADC;
+
+	return (1125300UL) / 1;
 }
 
 uint16_t hwCPUFrequency()
 {
-	cli();
-	// setup timer1
-	TIFR1 = 0xFF;
-	TCNT1 = 0;
-	TCCR1A = 0;
-	TCCR1C = 0;
-	// save WDT settings
-	uint8_t WDTsave = WDTCSR;
-	wdt_enable(WDTO_500MS);
-	// enable WDT interrupt mode => first timeout WDIF, 2nd timeout reset
-	WDTCSR |= (1 << WDIE);
-	wdt_reset();
-	// start timer1 with 1024 prescaling
-	TCCR1B = _BV(CS12) | _BV(CS10);
-	// wait until wdt interrupt
-	while (bit_is_clear(WDTCSR,WDIF)) {};
-	// stop timer
-	TCCR1B = 0;
-	// restore WDT settings
-	wdt_reset();
-	WDTCSR |= (1 << WDCE) | (1 << WDE);
-	WDTCSR = WDTsave;
-	sei();
 	// return frequency in 1/10MHz (accuracy +- 10%)
-	return TCNT1 * 2048UL / 100000UL;
+	return 2048UL / 100000UL;
 }
 
 uint16_t hwFreeMem()
@@ -261,14 +191,15 @@ uint16_t hwFreeMem()
 void hwDebugPrint(const char *fmt, ... )
 {
 	char fmtBuffer[MY_SERIAL_OUTPUT_SIZE];
+	
 #ifdef MY_GATEWAY_FEATURE
 	// prepend debug message to be handled correctly by controller (C_INTERNAL, I_LOG_MESSAGE)
 	snprintf_P(fmtBuffer, sizeof(fmtBuffer), PSTR("0;255;%d;0;%d;"), C_INTERNAL, I_LOG_MESSAGE);
 	MY_SERIALDEVICE.print(fmtBuffer);
 #else
 	// prepend timestamp (AVR nodes)
-	MY_SERIALDEVICE.print(hwMillis());
-	MY_SERIALDEVICE.print(" ");
+	//MY_SERIALDEVICE.print(hwMillis());
+	MY_SERIALDEVICE.print(".");
 #endif
 	va_list args;
 	va_start (args, fmt );

@@ -80,7 +80,7 @@ void _infiniteLoop(void)
 }
 
 void _begin(void)
-{
+{	
 	// reset wdt
 	hwWatchdogReset();
 
@@ -503,6 +503,7 @@ void doYield(void)
 	hwWatchdogReset();
 
 	yield();
+
 
 #if defined (MY_DEFAULT_TX_LED_PIN) || defined(MY_DEFAULT_RX_LED_PIN) || defined(MY_DEFAULT_ERR_LED_PIN)
 	ledsProcess();

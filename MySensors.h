@@ -68,6 +68,7 @@
 #elif defined(__linux__)
 #include "core/MyHwLinuxGeneric.cpp"
 #elif defined(ARDUINO_ARCH_XI)
+#include "drivers/AVR/DigitalWriteFast/digitalWriteFast.h"
 #include "core/MyHwLG8F.cpp"
 #endif
 
@@ -342,6 +343,8 @@ MY_DEFAULT_RX_LED_PIN in your sketch instead to enable LEDs
 #include "core/MyMainESP8266.cpp"
 #elif defined(__linux__)
 #include "core/MyMainLinux.cpp"
+#elif defined(ARDUINO_ARCH_XI)
+#include "core/MyMainXI.cpp"
 #else
 #include "core/MyMainDefault.cpp"
 #endif
